@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Task #3 answer for BSA'18</title>
+  </head>
+  <body>
+    <p>
+        <h5>0 - Накатить бэкап базы</h5>
+        <code>$ mongoimport --db testUsers ./users.json</code><br>
+        <br>Або (у Windows PowerShell):<br>
+        <code>.\mongoimport --db testUsers --collection users --file "C:\data\users.json"</code>
+    </p>
+    <p>
+        <h5>1 - Найти средний возраст людей в системе</h5>
+        <code>db.users.aggregate({$group: {_id: "avgAge", avgAge: {$avg: "$age"}}})</code><br>
+        <code>{ "_id" : "avgAge", "avgAge" : 30.38862559241706 }</code><br>
+        <br><i>Середній вік: 30.38862559241706 років</i>
+    </p>
+    <p>
+        <h5>2 - Найти средний возраст в штате Аляска</h5>
+        <code>db.users.aggregate({$match: {address: {$regex: "Alaska"}}}, {$group: {_id: "avgAge_Alaska", avgAge_Alaska: {$avg: "$age"}}})</code><br>
+        <code>{ "_id" : "avgAge_Alaska", "avgAge_Alaska" : 31.5 }</code><br>
+        <br><i>Середній вік (Аляска): 31.5 років.</i>
+    </p>
+    <p>
+        <h5>3 - Начиная от Math.ceil(avg + avg_alaska) (порядковый номер документа в БД ) найти первого человека с другом по имени Деннис</h5>
+        <code>db.users.findOne({"friends.name": {$regex: "Dennis"}, index: {$gte: 62}}, {index: 1, name: 1, address: 1, friends: 1})</code><br>
+        <code>{
+                "_id" : ObjectId("5adf3c1544abaca147cdd47c"),
+                "index" : 306,
+                "name" : "Esperanza Blevins",
+                "address" : "659 Oceanic Avenue, Collins, Utah, 6277",
+                "friends" : [
+                    {
+                        "id" : 0,
+                        "name" : "Charles Dennis"
+                    },
+                    {
+                        "id" : 1,
+                        "name" : "Arlene Walton"
+                    },
+                    {
+                        "id" : 2,
+                        "name" : "Trisha Long"
+                    }
+                ]
+            }</code><br>
+        <br><i>Результатом Math.ceil(30.38862559241706 + 31.5) одразу беремо 62 (без $ceil чи $add), оскільки ці пошук та агрегація вже виконані в попередніх пунктах.
+        Поєднання cursor.skip() та Range Queries я наразі ще не освоїв, тому як порядковий номер документа в БД беру вже готовий "index", який дещо відрізняється від порядкового номера.</i>
+    </p>
+    <p>
+        <h5>4 - Найти активных людей из того же штата, что и предыдущий человек и посмотреть какой фрукт любят больше всего в этом штате (аггрегация)</h5>
+        <code>db.users.aggregate({$match: {address: {$regex: "Utah"}}}, {$group: {_id: "$favoriteFruit", count: {$sum: 1}}}, {$sort: {count: -1}})</code><br>
+        <code>{ "_id" : "apple", "count" : 6 }</code><br>      
+        <code>{ "_id" : "banana", "count" : 6 }</code><br> 
+        <code>{ "_id" : "strawberry", "count" : 3 }</code><br>    
+        <br><i>15 людей зі штату Юта. Найбільше там полюбляють яблука та банани.</i>
+    </p>
+    <p>
+        <h5>5 - Найти саммого раннего зарегистрировавшегося пользователя с таким любимым фруктом</h5>
+        <code>db.users.findOne({$or: [{favoriteFruit: "apple"}, {favoriteFruit: "banana"}]}, {name: 1, favoriteFruit: 1})</code><br>
+        <code>{"_id" : ObjectId("5adf3c1544abaca147cdd34b"), "name" : "Macias Shannon", "favoriteFruit" : "apple"}</code><br>
+        <br><i>Перший (по списку) любитель яблук.</i>
+    </p>
+    <p>
+        <h5>6 - Добавить этому пользовелю свойтво: { features: 'first apple eater' }</h5>
+        <code>db.users.update({_id: ObjectId("5adf3c1544abaca147cdd34b")}, {$set: {features: 'first apple eater'}})</code><br>
+        <code>WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 })</code><br>
+        <code>db.users.find({features: 'first apple eater'}, {name: 1})</code><br>
+        <code>{ "_id" : ObjectId("5adf3c1544abaca147cdd34b"), "name" : "Macias Shannon" }</code><br>
+        <br><i>Присвоюємо додаткову ознаку.</i>
+    </p>
+    <p>
+        <h5>7 - Удалить всех любителей клубники (написать количество удаленных пользователей)</h5>
+        <code>db.users.remove({favoriteFruit: "strawberry"})</code><br>
+        <code>WriteResult({ "nRemoved" : 253 })</code><br>
+        <br><i>Видалено записи про любителів полуниці: 253 користувачі.</i>
+    </p>
+  </body>
+</html>
